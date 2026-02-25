@@ -23,16 +23,13 @@ export class ExcelGenerator {
 
     // Define columns clearly per requirements
     sheet.columns = [
-      { header: "Test Case ID", key: "id", width: 15 },
+      { header: "Test Case ID", key: "testCaseId", width: 15 },
+      { header: "Mapped Req", key: "mappedRequirementId", width: 15 },
       { header: "Type", key: "type", width: 15 },
-      { header: "Module", key: "module", width: 20 },
-      { header: "Priority", key: "priority", width: 12 },
       { header: "Title", key: "title", width: 35 },
-      { header: "Description", key: "description", width: 45 },
       { header: "Preconditions", key: "preconditions", width: 35 },
-      { header: "Steps", key: "steps", width: 50 },
-      { header: "Expected Result", key: "expected_result", width: 40 },
-      { header: "Remarks", key: "remarks", width: 30 },
+      { header: "Steps", key: "steps", width: 60 },
+      { header: "Expected Result", key: "expectedResult", width: 40 },
     ];
 
     // Style the header row to stand out

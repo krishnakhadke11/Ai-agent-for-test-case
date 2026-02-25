@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Sparkles, RefreshCcw, CheckCircle2 } from "lucide-react";
+import {
+  Loader2,
+  Sparkles,
+  RefreshCcw,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { DragDropZone } from "@/components/FileUpload/DragDropZone";
 import { FileRequirements } from "@/components/FileUpload/FileRequirements";
 import { MetricsBoard } from "@/components/ResultSummary/MetricsBoard";
@@ -14,26 +20,34 @@ import { type TestCaseGenerationResult } from "@/lib/ai/types";
  * to deliver a seamless, state-driven user experience.
  */
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null);
+  const [udFile, setUdFile] = useState<File | null>(null);
+  const [hldFile, setHldFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<
-    (TestCaseGenerationResult & { download_url: string }) | null
+    (TestCaseGenerationResult & { download_url?: string }) | null
   >(null);
 
   /**
-   * Primary upload handler. Packages the file as FormData and calls the Next.js backend API.
+   * Primary upload handler. Packages the files as FormData and calls the Next.js backend API.
    * Modifies component state appropriately.
    */
-  const handleUpload = async (selectedFile: File) => {
-    setFile(selectedFile);
+  const handleSubmit = async () => {
+    if (!udFile || !hldFile) {
+      setError(
+        "Please provide both Usage Decision (UD) and High-Level Design (HLD) documents.",
+      );
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setResult(null);
 
     try {
       const formData = new FormData();
-      formData.append("file", selectedFile);
+      formData.append("ud_file", udFile);
+      formData.append("hld_file", hldFile);
 
       const response = await fetch("/api/generate-testcases", {
         method: "POST",
@@ -53,14 +67,14 @@ export default function Home() {
           ? err.message
           : "An unexpected error occurred connecting to the server.";
       setError(errorMessage);
-      setFile(null); // Reset file to allow immediate retry
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleReset = () => {
-    setFile(null);
+    setUdFile(null);
+    setHldFile(null);
     setResult(null);
     setError(null);
   };
@@ -112,10 +126,33 @@ export default function Home() {
               className="w-full"
             >
               <div className="relative">
-                <DragDropZone
-                  onFileSelect={handleUpload}
-                  isLoading={isLoading}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <DragDropZone
+                    label="Usage Decision (UD)"
+                    selectedFile={udFile}
+                    onFileSelect={setUdFile}
+                    onClear={() => setUdFile(null)}
+                    isLoading={isLoading}
+                  />
+                  <DragDropZone
+                    label="High-Level Design (HLD)"
+                    selectedFile={hldFile}
+                    onFileSelect={setHldFile}
+                    onClear={() => setHldFile(null)}
+                    isLoading={isLoading}
+                  />
+                </div>
+
+                <div className="flex justify-center mb-6">
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!udFile || !hldFile || isLoading}
+                    className="flex w-full sm:w-auto items-center justify-center space-x-2 bg-primary-600 hover:bg-primary-500 disabled:bg-slate-800 disabled:text-slate-500 text-white px-8 py-3.5 rounded-xl font-medium transition-all shadow-lg shadow-primary-500/20"
+                  >
+                    <span>Analyze & Generate Test Cases</span>
+                    <Sparkles className="w-5 h-5" />
+                  </button>
+                </div>
 
                 {/* Visual loading overlay */}
                 <AnimatePresence>
@@ -158,48 +195,146 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               className="w-full space-y-8"
             >
-              {/* 
-                 Results Dashboard: Shows the breakdown of generated test cases.
-                 Provides an option to restart the process and upload another document.
-               */}
-              <div className="flex justify-between items-end mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold tracking-tight text-emerald-400 flex items-center gap-2">
-                    <CheckCircle2 className="w-6 h-6" /> Test Generation
-                    Complete
-                  </h2>
-                  <p className="text-slate-400 mt-1">
-                    Successfully parsed specs from:{" "}
-                    <span className="text-slate-300 font-medium">
-                      {file?.name}
-                    </span>
-                  </p>
+              {result.status === "rejected" ? (
+                <div className="w-full space-y-8">
+                  <div className="flex justify-between items-end mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold tracking-tight text-rose-400 flex items-center gap-2">
+                        <AlertCircle className="w-6 h-6" /> Requirements
+                        Mismatch Detected
+                      </h2>
+                      <p className="text-slate-400 mt-1">
+                        High-Level Design does not adequately cover the Usage
+                        Decision.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleReset}
+                      className="hidden sm:flex items-center space-x-2 text-sm text-slate-400 hover:text-white transition-colors"
+                    >
+                      <RefreshCcw className="w-4 h-4" />
+                      <span>Start Over</span>
+                    </button>
+                  </div>
+
+                  <div className="glass-panel p-6 sm:p-8 relative border border-rose-500/30">
+                    <div className="mb-8 p-6 bg-slate-800/50 rounded-2xl">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-lg font-medium text-slate-200">
+                          Coverage Score
+                        </span>
+                        <span className="text-3xl font-bold text-rose-400">
+                          {Math.round(result.coveragePercentage)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-900 rounded-full h-4 overflow-hidden border border-slate-700">
+                        <motion.div
+                          className="bg-rose-500 h-4 rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${result.coveragePercentage}%` }}
+                          transition={{ duration: 1, ease: "easeOut" }}
+                        />
+                      </div>
+                      <div className="flex justify-between mt-2 text-sm text-slate-400">
+                        <span>Current coverage</span>
+                        <span>Threshold: 90%</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-medium text-rose-300 border-b border-rose-500/20 pb-2">
+                        Missing Requirements
+                      </h3>
+                      <ul className="list-disc pl-5 space-y-3 text-slate-300">
+                        {result.missingRequirements?.map(
+                          (req: any, i: number) => (
+                            <li key={i}>
+                              <strong className="text-white">{req.id}:</strong>{" "}
+                              {req.description}
+                            </li>
+                          ),
+                        )}
+                      </ul>
+
+                      {result.recommendations &&
+                        result.recommendations.length > 0 && (
+                          <div className="mt-8 p-5 bg-rose-500/5 rounded-xl border border-rose-500/20">
+                            <p className="text-primary-300 text-sm font-semibold tracking-wide uppercase mb-2">
+                              Recommendations
+                            </p>
+                            <ul className="list-disc pl-5 space-y-2 text-slate-300 text-lg">
+                              {result.recommendations.map(
+                                (rec: string, i: number) => (
+                                  <li key={i}>{rec}</li>
+                                ),
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleReset}
+                    className="sm:hidden w-full mt-8 flex justify-center items-center space-x-2 py-3 rounded-xl bg-slate-800 text-slate-300 font-medium border border-slate-700"
+                  >
+                    <RefreshCcw className="w-5 h-5" />
+                    <span>Upload Another Document</span>
+                  </button>
                 </div>
-                <button
-                  onClick={handleReset}
-                  className="hidden sm:flex items-center space-x-2 text-sm text-slate-400 hover:text-white transition-colors"
-                >
-                  <RefreshCcw className="w-4 h-4" />
-                  <span>Start Over</span>
-                </button>
-              </div>
+              ) : (
+                <div className="w-full space-y-8">
+                  {/* 
+                     Results Dashboard: Shows the breakdown of generated test cases.
+                     Provides an option to restart the process and upload another document.
+                   */}
+                  <div className="flex justify-between items-end mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold tracking-tight text-emerald-400 flex items-center gap-2">
+                        <CheckCircle2 className="w-6 h-6" /> Test Generation
+                        Complete
+                      </h2>
+                      <div className="flex items-center space-x-4 mt-2">
+                        <p className="text-slate-400 flex items-center space-x-2">
+                          <span className="text-slate-300 font-medium bg-slate-800 px-2.5 py-1 rounded-md text-sm border border-slate-700">
+                            UD: {udFile?.name}
+                          </span>
+                          <span className="text-slate-500">+</span>
+                          <span className="text-slate-300 font-medium bg-slate-800 px-2.5 py-1 rounded-md text-sm border border-slate-700">
+                            HLD: {hldFile?.name}
+                          </span>
+                        </p>
+                        <span className="text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 text-sm border border-emerald-500/20 rounded-md">
+                          {Math.round(result.coveragePercentage)}% Coverage
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleReset}
+                      className="hidden sm:flex items-center space-x-2 text-sm text-slate-400 hover:text-white transition-colors"
+                    >
+                      <RefreshCcw className="w-4 h-4" />
+                      <span>Start Over</span>
+                    </button>
+                  </div>
 
-              <MetricsBoard summary={result.summary} />
+                  <MetricsBoard summary={result.coverageBreakdown} />
 
-              <div className="glass-panel p-6 sm:p-8 relative">
-                <TestCasePreview
-                  testCases={result.test_cases}
-                  downloadUrl={result.download_url}
-                />
-              </div>
+                  <div className="glass-panel p-6 sm:p-8 relative">
+                    <TestCasePreview
+                      testCases={result.testCases}
+                      downloadUrl={result.download_url || ""}
+                    />
+                  </div>
 
-              <button
-                onClick={handleReset}
-                className="sm:hidden w-full mt-8 flex justify-center items-center space-x-2 py-3 rounded-xl bg-slate-800 text-slate-300 font-medium border border-slate-700"
-              >
-                <RefreshCcw className="w-5 h-5" />
-                <span>Upload Another Document</span>
-              </button>
+                  <button
+                    onClick={handleReset}
+                    className="sm:hidden w-full mt-8 flex justify-center items-center space-x-2 py-3 rounded-xl bg-slate-800 text-slate-300 font-medium border border-slate-700"
+                  >
+                    <RefreshCcw className="w-5 h-5" />
+                    <span>Upload Another Document</span>
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

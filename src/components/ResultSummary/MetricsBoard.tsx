@@ -1,4 +1,4 @@
-import { type TestCasesSummary } from "@/lib/ai/types";
+import { type CoverageBreakdown } from "@/lib/ai/types";
 import {
   ClipboardCheck,
   CheckCircle,
@@ -11,56 +11,49 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface MetricsBoardProps {
-  summary: TestCasesSummary;
+  summary: CoverageBreakdown;
 }
 
 /**
- * Displays an aggregated view of the generated test case metrics.
+ * Displays an aggregated view of the deterministic coverage metrics.
  * Uses staggered framer-motion animations to deliver a premium reveal feel.
  */
 export function MetricsBoard({ summary }: MetricsBoardProps) {
   const metricsList = [
     {
-      label: "Total Cases",
-      value: summary.total_test_cases,
+      label: "Total Req.",
+      value: summary.totalRequirements,
       icon: ClipboardCheck,
       color: "text-blue-400",
       bg: "bg-blue-400/10",
     },
     {
-      label: "Positive",
-      value: summary.positive,
+      label: "Strong Coverage",
+      value: summary.strongCovered,
       icon: CheckCircle,
       color: "text-emerald-400",
       bg: "bg-emerald-400/10",
     },
     {
-      label: "Negative",
-      value: summary.negative,
-      icon: XCircle,
-      color: "text-red-400",
-      bg: "bg-red-400/10",
+      label: "Moderate Coverage",
+      value: summary.moderateCovered,
+      icon: ShieldCheck,
+      color: "text-teal-400",
+      bg: "bg-teal-400/10",
     },
     {
-      label: "Boundary",
-      value: summary.boundary,
+      label: "Partial Coverage",
+      value: summary.partiallyCovered,
       icon: AlertTriangle,
       color: "text-amber-400",
       bg: "bg-amber-400/10",
     },
     {
-      label: "Edge Cases",
-      value: summary.edge,
-      icon: LayoutTemplate,
-      color: "text-purple-400",
-      bg: "bg-purple-400/10",
-    },
-    {
-      label: "Validation",
-      value: summary.validation,
-      icon: ShieldCheck,
-      color: "text-indigo-400",
-      bg: "bg-indigo-400/10",
+      label: "Not Covered",
+      value: summary.notCovered,
+      icon: XCircle,
+      color: "text-red-400",
+      bg: "bg-red-400/10",
     },
   ];
 

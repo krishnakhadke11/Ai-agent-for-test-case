@@ -12,6 +12,7 @@
     "@ai-sdk/google": "^3.0.30",
     "ai": "^6.0.97",
     "clsx": "^2.1.1",
+    "cosine-similarity": "^1.0.1",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.34.3",
     "lucide-react": "^0.575.0",

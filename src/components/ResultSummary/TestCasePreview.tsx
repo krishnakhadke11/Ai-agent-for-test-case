@@ -60,18 +60,18 @@ export function TestCasePreview({
               <tr>
                 <th className="px-6 py-4">ID</th>
                 <th className="px-6 py-4">Type</th>
+                <th className="px-6 py-4">Mapped Req</th>
                 <th className="px-6 py-4">Title</th>
-                <th className="px-6 py-4">Priority</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
               {previewData.map((tc) => (
                 <tr
-                  key={tc.id}
+                  key={tc.testCaseId}
                   className="hover:bg-slate-800/40 transition-colors"
                 >
                   <td className="px-6 py-4 font-mono text-slate-400">
-                    {tc.id}
+                    {tc.testCaseId}
                   </td>
                   <td className="px-6 py-4">
                     <span
@@ -87,12 +87,14 @@ export function TestCasePreview({
                       {tc.type}
                     </span>
                   </td>
+                  <td className="px-6 py-4 text-emerald-400 font-mono text-sm">
+                    {tc.mappedRequirementId}
+                  </td>
                   <td className="px-6 py-4 font-medium text-slate-200">
                     <div className="truncate max-w-[300px]" title={tc.title}>
                       {tc.title}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-slate-400">{tc.priority}</td>
                 </tr>
               ))}
             </tbody>

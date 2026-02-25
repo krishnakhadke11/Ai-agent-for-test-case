@@ -10,7 +10,6 @@ export class PDFParser implements DocumentParser {
   async parse(buffer: Buffer): Promise<string> {
     try {
       // Use Node's require to load pdf-parse CommonJS module reliably.
-      // @ts-ignore
       const pdfParse = createRequire(import.meta.url)("pdf-parse");
       console.log("pdfParse type:", typeof pdfParse);
       const data = await pdfParse(buffer);

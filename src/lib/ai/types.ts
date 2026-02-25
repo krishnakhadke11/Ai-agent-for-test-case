@@ -1,80 +1,110 @@
 import { z } from "zod";
 
-/**
- * Defines the core structure of a single test case.
- * This ensures all generated test cases adhere to the required format
- * for CSV/XLSX export.
- */
-export const TestCaseSchema = z.object({
-  id: z.string().describe("Unique identifier for the test case (e.g., TC_001)"),
-  title: z.string().describe("Brief, descriptive title of the test case"),
+// --- 1. ATOMIC EXTRACTION SCHEMAS ---
+
+export const RequirementSchema = z.object({
+  id: z.string().describe("Unique requirement identifier (e.g., REQ-1)"),
+  type: z
+    .enum(["functional", "non-functional"])
+    .describe("The type of requirement"),
+  description: z.string().describe("Clear, atomic description of the behavior"),
+  priority: z
+    .enum(["High", "Medium", "Low"])
+    .describe("Priority of the requirement"),
+});
+
+export type Requirement = z.infer<typeof RequirementSchema>;
+
+export const HLDComponentSchema = z.object({
+  componentId: z
+    .string()
+    .describe("Unique component identifier (e.g., COMP-1)"),
   description: z
     .string()
-    .describe("Detailed description of what the test case verifies"),
+    .describe("Detailed description of the implementation"),
+  sectionName: z.string().describe("The relevant section or module in the HLD"),
+});
+
+export type HLDComponent = z.infer<typeof HLDComponentSchema>;
+
+// --- 2. EMBEDDING STORE SCHEMAS ---
+
+export interface EmbeddedItem<T> {
+  item: T;
+  vector: number[];
+}
+
+export interface MatchedRequirement {
+  requirement: Requirement;
+  bestMatchComponent?: HLDComponent;
+  similarityScore: number;
+}
+
+// --- 3. TEST CASE SCHEMAS ---
+
+export const TestCaseSchema = z.object({
+  testCaseId: z
+    .string()
+    .describe("Unique identifier for the test case (e.g., TC_001)"),
+  mappedRequirementId: z.string().describe("The REQ ID this test case covers"),
+  title: z.string().describe("Brief, descriptive title of the test case"),
   preconditions: z
     .string()
     .describe("Prerequisites before executing the test case"),
   steps: z
     .string()
     .describe("Step-by-step instructions to execute the test case"),
-  expected_result: z.string().describe("The expected outcome of the test case"),
-  priority: z
-    .enum(["High", "Medium", "Low"])
-    .describe("Priority level of the test case"),
+  expectedResult: z.string().describe("The expected outcome of the test case"),
   type: z
-    .enum([
-      "Positive",
-      "Negative",
-      "Boundary",
-      "Edge",
-      "Validation",
-      "API",
-      "Error Handling",
-    ])
+    .enum(["Positive", "Negative", "Edge"])
     .describe("The category or type of the test case"),
-  module: z
-    .string()
-    .describe("The specific module or feature area being tested"),
-  remarks: z.string().describe("Any additional notes or comments (optional)"),
 });
 
 export type TestCase = z.infer<typeof TestCaseSchema>;
 
-/**
- * Defines the summary statistics for a generated batch of test cases.
- */
-export const TestCasesSummarySchema = z.object({
-  total_test_cases: z.number(),
-  positive: z.number(),
-  negative: z.number(),
-  boundary: z.number(),
-  edge: z.number(),
-  validation: z.number(),
-});
+// --- 4. COVERAGE SCHEMAS ---
 
-export type TestCasesSummary = z.infer<typeof TestCasesSummarySchema>;
+export interface CoverageBreakdown {
+  strongCovered: number;
+  moderateCovered: number;
+  partiallyCovered: number;
+  notCovered: number;
+  totalRequirements: number;
+}
 
-/**
- * Defines the complete response structure expected from the AI provider.
- */
-export const TestCaseGenerationResultSchema = z.object({
-  summary: TestCasesSummarySchema,
-  test_cases: z.array(TestCaseSchema),
-});
+// --- 5. RESPONSE SCHEMAS ---
 
-export type TestCaseGenerationResult = z.infer<
-  typeof TestCaseGenerationResultSchema
->;
+export interface ApprovedGenerationResult {
+  status: "approved";
+  coveragePercentage: number;
+  coverageBreakdown: CoverageBreakdown;
+  requirementMapping: MatchedRequirement[];
+  testCases: TestCase[];
+  download_url?: string;
+}
 
-/**
- * Abstract interface for any AI Provider.
- * This enables the plug-and-play architecture.
- */
+export interface RejectedGenerationResult {
+  status: "rejected";
+  coveragePercentage: number;
+  coverageBreakdown: CoverageBreakdown;
+  missingRequirements: Requirement[];
+  weakCoverageRequirements: Requirement[];
+  recommendations: string[];
+}
+
+export type TestCaseGenerationResult =
+  | ApprovedGenerationResult
+  | RejectedGenerationResult;
+
+// --- 6. AI PROVIDER INTERFACE ---
+
 export interface AIProvider {
   /**
-   * Generates test cases from a given document text.
-   * @param documentText The extracted text content from a Usage Decision document.
-   * @returns A promise that resolves to the structured test case generation result.
+   * Generates test cases by validating an HLD against a UD document using embeddings.
    */
-  generateTestCases(documentText: string): Promise<TestCaseGenerationResult>;
+  generateTestCases(
+    udText: string,
+    hldText: string,
+    threshold?: number, // 90 as default
+  ): Promise<TestCaseGenerationResult>;
 }

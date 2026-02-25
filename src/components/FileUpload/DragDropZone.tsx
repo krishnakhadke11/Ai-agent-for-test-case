@@ -8,6 +8,9 @@ import { motion, AnimatePresence } from "framer-motion";
 interface DragDropZoneProps {
   onFileSelect: (file: File) => void;
   isLoading: boolean;
+  label?: string;
+  selectedFile?: File | null;
+  onClear?: () => void;
 }
 
 /**
@@ -15,7 +18,13 @@ interface DragDropZoneProps {
  * It strictly separates the UI state (dragging, error) from the upload logic,
  * making it a clean, reusable component.
  */
-export function DragDropZone({ onFileSelect, isLoading }: DragDropZoneProps) {
+export function DragDropZone({
+  onFileSelect,
+  isLoading,
+  label = "Drop document here",
+  selectedFile,
+  onClear,
+}: DragDropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,47 +88,73 @@ export function DragDropZone({ onFileSelect, isLoading }: DragDropZoneProps) {
         The dropzone uses framer-motion for a smooth hover/tap feeling. 
         It dynamically alters border colors based on drag state. 
       */}
-      <motion.label
+      <motion.div
         whileHover={{ scale: isLoading ? 1 : 1.01 }}
         whileTap={{ scale: isLoading ? 1 : 0.99 }}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         className={cn(
-          "glass-panel relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-2xl cursor-pointer transition-all duration-300",
+          "glass-panel relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-2xl transition-all duration-300",
           isDragging
             ? "border-primary-500 bg-primary-500/10"
-            : "border-slate-700 hover:border-slate-500 hover:bg-slate-800/50",
+            : selectedFile
+              ? "border-emerald-500/50 bg-emerald-500/5"
+              : "border-slate-700 hover:border-slate-500 hover:bg-slate-800/50 cursor-pointer",
           isLoading && "opacity-50 cursor-not-allowed pointer-events-none",
         )}
       >
-        <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center space-y-4">
-          <UploadCloud
-            className={cn(
-              "w-12 h-12 text-slate-400 transition-colors",
-              isDragging && "text-primary-500",
+        {selectedFile ? (
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <File className="w-8 h-8" />
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-medium text-emerald-400">
+                {label} Selected
+              </p>
+              <p className="text-slate-300">{selectedFile.name}</p>
+            </div>
+            {!isLoading && onClear && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  onClear();
+                }}
+                className="mt-2 text-sm text-slate-400 hover:text-rose-400 transition-colors underline"
+              >
+                Remove File
+              </button>
             )}
-          />
-          <div className="space-y-1">
-            <p className="text-lg font-semibold text-slate-200">
-              {isDragging
-                ? "Drop document here"
-                : "Click or drag document to begin"}
-            </p>
-            <p className="text-sm text-slate-400">
-              PDF, DOCX, or TXT up to 10MB
-            </p>
           </div>
-        </div>
-        <input
-          id="dropzone-file"
-          type="file"
-          className="hidden"
-          accept=".pdf,.docx,.doc,.txt"
-          onChange={onFileInputChange}
-          disabled={isLoading}
-        />
-      </motion.label>
+        ) : (
+          <label className="flex flex-col items-center justify-center pt-5 pb-6 text-center space-y-4 cursor-pointer w-full h-full">
+            <UploadCloud
+              className={cn(
+                "w-12 h-12 text-slate-400 transition-colors",
+                isDragging && "text-primary-500",
+              )}
+            />
+            <div className="space-y-1">
+              <p className="text-lg font-semibold text-slate-200">
+                {isDragging ? "Drop document here" : label}
+              </p>
+              <p className="text-sm text-slate-400">
+                PDF, DOCX, or TXT up to 10MB
+              </p>
+            </div>
+            <input
+              type="file"
+              className="hidden"
+              accept=".pdf,.docx,.doc,.txt"
+              onChange={onFileInputChange}
+              disabled={isLoading}
+            />
+          </label>
+        )}
+      </motion.div>
 
       {/* Error display cleanly separated from the upload zone */}
       <AnimatePresence>
