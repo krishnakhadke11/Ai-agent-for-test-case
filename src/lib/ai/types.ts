@@ -58,8 +58,13 @@ export type TestCasesSummary = z.infer<typeof TestCasesSummarySchema>;
  * Defines the complete response structure expected from the AI provider.
  */
 export const TestCaseGenerationResultSchema = z.object({
-  summary: TestCasesSummarySchema,
-  test_cases: z.array(TestCaseSchema),
+  status: z.enum(["approved", "rejected"]),
+  match_percentage: z.number(),
+  threshold: z.number(),
+  missing_requirements: z.array(z.string()).optional(),
+  recommendation: z.string().optional(),
+  summary: TestCasesSummarySchema.optional(),
+  test_cases: z.array(TestCaseSchema).optional(),
 });
 
 export type TestCaseGenerationResult = z.infer<
@@ -73,8 +78,12 @@ export type TestCaseGenerationResult = z.infer<
 export interface AIProvider {
   /**
    * Generates test cases from a given document text.
-   * @param documentText The extracted text content from a Usage Decision document.
+   * @param udText The extracted text content from a Usage Decision document.
+   * @param hldText The extracted text content from a High-Level Design document.
    * @returns A promise that resolves to the structured test case generation result.
    */
-  generateTestCases(documentText: string): Promise<TestCaseGenerationResult>;
+  generateTestCases(
+    udText: string,
+    hldText: string,
+  ): Promise<TestCaseGenerationResult>;
 }
