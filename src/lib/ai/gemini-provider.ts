@@ -22,7 +22,6 @@ export class GeminiProvider implements AIProvider {
   knowledgeBaseText: string = `# Functional Knowledge Base
 
       ## Application Overview
-
       The **Mintoak Web UI** is a comprehensive merchant portal designed to provide businesses with deep insights and control over their daily payment operations. It serves as a unified dashboard for viewing transactions, managing refunds, tracking settlements, handling staff roles, and requesting/managing hardware like POS terminals and SoundBoxes.
 
       ### Who is this application for?
