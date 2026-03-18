@@ -1,23 +1,21 @@
-import { generateObject } from "ai";
-import { google } from "@ai-sdk/google";
+import { generateObject, generateText, Output } from "ai";
 
 import {
   AIProvider,
   TestCaseGenerationResult,
   TestCaseGenerationResultSchema,
 } from "./types";
+import { createOpenRouter, openrouter } from "@openrouter/ai-sdk-provider";
+import { object } from "zod";
 
 /**
- * Gemini implementation of the AIProvider.
- * Uses the Vercel AI SDK to stream/parse structured JSON for test case generation.
+ * Anthropic implementation of the AIProvider.
+ * Uses the Vercel AI SDK to generate structured JSON test cases.
  */
-export class GeminiProvider implements AIProvider {
+export class OpenRouterProvider implements AIProvider {
   /**
-   * Constructs the specific prompt for test case generation based on the Usage Decision document.
-   * @param documentText The raw text from the uploaded document.
-   * @returns The constructed prompt string.
+   * Functional knowledge base to improve domain-aware test case generation
    */
-
   knowledgeBaseText: string = `# Functional Knowledge Base
 
       ## Application Overview
@@ -97,7 +95,6 @@ export class GeminiProvider implements AIProvider {
       3.  **Validation**: Test cases must cover the edge cases of file uploads (especially for Bulk Refunds and Bulk Staff additions), ensuring format validation, size limits, and error handling for malformed rows.
       4.  **Role Access**: When testing Staff modules, always consider test cases that verify "Cashier" visibility vs. "Admin" visibility, particularly around the 'ManageRoles.tsx' and TID assignment layers.
 `;
-
   private buildPrompt(documentText: string): string {
     // return `
     //   You are an expert Quality Assurance Engineer and Test Automation Specialist.
@@ -161,30 +158,46 @@ export class GeminiProvider implements AIProvider {
     `;
   }
 
-  /**
-   * Communicates with Google's Gemini via the Vercel AI SDK
-   * to strictly return the JSON structure defined by TestCaseGenerationResultSchema.
-   */
+  openrouter = createOpenRouter({
+    apiKey: process.env.OPENROUTER_API_KEY,
+  });
 
+  /**
+   * Calls OpenRouter via Vercel AI SDK
+   */
   async generateTestCases(
     documentText: string,
   ): Promise<TestCaseGenerationResult> {
     try {
+      console.log("open-router model use");
       const prompt = this.buildPrompt(documentText);
 
-      // Using gemini-1.5-pro for better context windows and reasoning capabilities.
-      // Falls back to standard gemini if preferred.
-      const { object } = await generateObject({
-        model: google("gemini-2.5-flash"),
-        schema: TestCaseGenerationResultSchema,
+      // const { object } = await generateObject({
+      //   model: this.openrouter("stepfun/step-3.5-flash:free"),
+      //   schema: TestCaseGenerationResultSchema,
+      //   prompt,
+      //   temperature: 0,
+      // });
+
+      const { text } = await generateText({
+        model: this.openrouter("stepfun/step-3.5-flash:free"),
         prompt: prompt,
-        temperature: 0.2, // Low temperature for deterministic output
+        temperature: 0,
       });
 
-      return object;
+      const structuredOutput = await generateText({
+        model: this.openrouter("google/gemini-2.0-flash-lite-001"),
+        prompt: prompt,
+        output: Output.object({ schema: TestCaseGenerationResultSchema }),
+      });
+
+      console.log({ structuredOutput });
+      let parsed = JSON.parse(structuredOutput.text);
+
+      return TestCaseGenerationResultSchema.parse(parsed);
     } catch (error) {
-      console.error("GeminiProvider: Failed to generate test cases:", error);
-      throw new Error("Failed to generate test cases using Gemini Provider.");
+      console.error("OpenRouterProvider Error:", error);
+      throw new Error("Failed to generate test cases via OpenRouter.");
     }
   }
 }

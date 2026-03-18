@@ -1,5 +1,5 @@
 import { generateObject } from "ai";
-import { google } from "@ai-sdk/google";
+import { anthropic } from "@ai-sdk/anthropic";
 
 import {
   AIProvider,
@@ -8,16 +8,13 @@ import {
 } from "./types";
 
 /**
- * Gemini implementation of the AIProvider.
- * Uses the Vercel AI SDK to stream/parse structured JSON for test case generation.
+ * Anthropic implementation of the AIProvider.
+ * Uses the Vercel AI SDK to generate structured JSON test cases.
  */
-export class GeminiProvider implements AIProvider {
+export class AnthropicProvider implements AIProvider {
   /**
-   * Constructs the specific prompt for test case generation based on the Usage Decision document.
-   * @param documentText The raw text from the uploaded document.
-   * @returns The constructed prompt string.
+   * Functional knowledge base to improve domain-aware test case generation
    */
-
   knowledgeBaseText: string = `# Functional Knowledge Base
 
       ## Application Overview
@@ -97,7 +94,6 @@ export class GeminiProvider implements AIProvider {
       3.  **Validation**: Test cases must cover the edge cases of file uploads (especially for Bulk Refunds and Bulk Staff additions), ensuring format validation, size limits, and error handling for malformed rows.
       4.  **Role Access**: When testing Staff modules, always consider test cases that verify "Cashier" visibility vs. "Admin" visibility, particularly around the 'ManageRoles.tsx' and TID assignment layers.
 `;
-
   private buildPrompt(documentText: string): string {
     // return `
     //   You are an expert Quality Assurance Engineer and Test Automation Specialist.
@@ -162,29 +158,27 @@ export class GeminiProvider implements AIProvider {
   }
 
   /**
-   * Communicates with Google's Gemini via the Vercel AI SDK
-   * to strictly return the JSON structure defined by TestCaseGenerationResultSchema.
+   * Calls Anthropic Claude via Vercel AI SDK
    */
-
   async generateTestCases(
     documentText: string,
   ): Promise<TestCaseGenerationResult> {
     try {
       const prompt = this.buildPrompt(documentText);
 
-      // Using gemini-1.5-pro for better context windows and reasoning capabilities.
-      // Falls back to standard gemini if preferred.
       const { object } = await generateObject({
-        model: google("gemini-2.5-flash"),
+        model: anthropic("claude-3-5-sonnet-20241022"),
         schema: TestCaseGenerationResultSchema,
-        prompt: prompt,
-        temperature: 0.2, // Low temperature for deterministic output
+        prompt,
+        temperature: 0.2,
       });
 
       return object;
     } catch (error) {
-      console.error("GeminiProvider: Failed to generate test cases:", error);
-      throw new Error("Failed to generate test cases using Gemini Provider.");
+      console.error("AnthropicProvider: Failed to generate test cases:", error);
+      throw new Error(
+        "Failed to generate test cases using Anthropic Provider.",
+      );
     }
   }
 }

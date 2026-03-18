@@ -1,5 +1,13 @@
 import { AIProvider } from "./types";
 import { GeminiProvider } from "./gemini-provider";
+import { AnthropicProvider } from "./anthropic-provider";
+import { OpenRouterProvider } from "./openRouter-provider";
+
+// Development-time fix for 'unable to get local issuer certificate' errors
+// when connecting to AI providers behind proxies.
+if (process.env.NODE_ENV === "development") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 
 /**
  * Factory class to instantiate the correct AI provider based on
@@ -19,8 +27,12 @@ export class AIFactory {
     switch (providerKey) {
       case "gemini":
         return new GeminiProvider();
-      // case "claude":
-      //   return new ClaudeProvider();
+
+      case "anthropic":
+        return new AnthropicProvider();
+
+      case "open-router":
+        return new OpenRouterProvider();
       default:
         console.warn(
           `AI_PROVIDER '${providerKey}' is not supported. Falling back to Gemini.`,
